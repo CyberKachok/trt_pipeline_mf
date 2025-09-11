@@ -14,6 +14,7 @@ def main():
     parser.add_argument('--output_dir', required=True, help='Directory to store evaluation results')
     parser.add_argument('--matlab_config', required=True, help='Path to UAV123 MATLAB config file')
     parser.add_argument('--workspace', type=int, default=1 << 30, help='TensorRT workspace size in bytes')
+    parser.add_argument('--calib_data', default=None, help='Directory of UAV123 frames for INT8 calibration')
     args = parser.parse_args()
 
     onnx_path = convert_to_onnx(args.config, args.ckpt)
@@ -21,13 +22,21 @@ def main():
     builder_variants = [
         {'name': 'fp32', 'fp16': False},
         {'name': 'fp16', 'fp16': True},
+        {'name': 'int8', 'fp16': False, 'int8': True, 'calib_dir': args.calib_data or args.data_root},
     ]
 
     results = []
     for variant in builder_variants:
         engine_path = os.path.splitext(args.ckpt)[0] + f"_{variant['name']}.engine"
         try:
-            build_engine(onnx_path, engine_path, fp16=variant['fp16'], workspace=args.workspace)
+            build_engine(
+                onnx_path,
+                engine_path,
+                fp16=variant.get('fp16', False),
+                int8=variant.get('int8', False),
+                calib_dir=variant.get('calib_dir'),
+                workspace=args.workspace,
+            )
         except Exception as e:
             print(f"[ERROR] Failed to build engine for {variant['name']}: {e}")
             continue
