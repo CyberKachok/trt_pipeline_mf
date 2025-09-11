@@ -61,6 +61,17 @@ def main():
         print('[BEST] configuration:', best['name'])
         print('[BEST] engine:', best['engine'])
         print('[BEST] metrics:', best['metrics'])
+
+        cfg_name = os.path.splitext(os.path.basename(args.config))[0]
+        ckpt_name = os.path.splitext(os.path.basename(args.ckpt))[0]
+        report_path = os.path.join(args.output_dir, f"{cfg_name}_{ckpt_name}_trt_report.txt")
+        with open(report_path, 'w') as f:
+            f.write("variant,Avg_IoU,Avg_FPS\n")
+            for r in results:
+                f.write(
+                    f"{r['name']},{r['metrics'].get('Avg_IoU', 0):.4f},{r['metrics'].get('Avg_FPS', 0):.2f}\n"
+                )
+        print(f"[INFO] Report saved to {report_path}")
     else:
         print('No successful evaluations')
 
