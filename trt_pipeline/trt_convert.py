@@ -46,6 +46,10 @@ class UAV123Calibrator(trt.IInt8EntropyCalibrator2):
         self.files = sorted(files)
         self.index = 0
         self.batch_size = 1
+
+        self.mean = np.array([0.485, 0.456, 0.406], dtype=np.float32).reshape(3, 1, 1)
+        self.std = np.array([0.229, 0.224, 0.225], dtype=np.float32).reshape(3, 1, 1)
+
         # Allocate one batch worth of device memory per input tensor
         if cuda is None:
             raise RuntimeError("pycuda not available")
@@ -74,6 +78,10 @@ class UAV123Calibrator(trt.IInt8EntropyCalibrator2):
                     raise RuntimeError("OpenCV required to resize .npy frames")
                 arr = cv2.resize(np.transpose(arr, (1, 2, 0)), (W, H))
                 arr = np.transpose(arr, (2, 0, 1))
+
+            if arr.max() > 1.0:
+                arr = arr / 255.0
+
         else:
             if cv2 is None:
                 raise RuntimeError("OpenCV required to read calibration images")
@@ -83,9 +91,9 @@ class UAV123Calibrator(trt.IInt8EntropyCalibrator2):
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
             img = cv2.resize(img, (W, H))
+            arr = np.transpose(img.astype(np.float32), (2, 0, 1)) / 255.0
+        arr = (arr - self.mean) / self.std
 
-            arr = img.astype(np.float32) / 255.0
-            arr = np.transpose(arr, (2, 0, 1))  # CHW
         return arr
 
     def get_batch(self, names):  # noqa: D401 - interface requirement
