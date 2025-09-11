@@ -29,7 +29,9 @@ class UAV123Calibrator(trt.IInt8EntropyCalibrator2):
     """
 
     def __init__(self, data_dir: str, input_shapes, cache_file: str):
-        super().__init__()
+
+        trt.IInt8EntropyCalibrator2.__init__(self)
+
         self.data_dir = data_dir
         self.cache_file = cache_file
         # list of CHW shapes for each network input
@@ -59,8 +61,19 @@ class UAV123Calibrator(trt.IInt8EntropyCalibrator2):
         return self.batch_size
 
     def preprocess(self, path, shape):
+        C, H, W = shape
+
         if path.endswith(".npy"):
             arr = np.load(path).astype(np.float32)
+            if arr.ndim != 3:
+                raise RuntimeError(f"Unexpected .npy shape: {arr.shape}")
+            if arr.shape[0] != C and arr.shape[-1] == C:
+                arr = np.transpose(arr, (2, 0, 1))
+            if arr.shape[1:] != (H, W):
+                if cv2 is None:
+                    raise RuntimeError("OpenCV required to resize .npy frames")
+                arr = cv2.resize(np.transpose(arr, (1, 2, 0)), (W, H))
+                arr = np.transpose(arr, (2, 0, 1))
         else:
             if cv2 is None:
                 raise RuntimeError("OpenCV required to read calibration images")
@@ -68,7 +81,9 @@ class UAV123Calibrator(trt.IInt8EntropyCalibrator2):
             if img is None:
                 raise RuntimeError(f"Failed to read image {path}")
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            img = cv2.resize(img, (shape[2], shape[1]))
+
+            img = cv2.resize(img, (W, H))
+
             arr = img.astype(np.float32) / 255.0
             arr = np.transpose(arr, (2, 0, 1))  # CHW
         return arr
@@ -78,13 +93,17 @@ class UAV123Calibrator(trt.IInt8EntropyCalibrator2):
             return None
         path = self.files[self.index]
         self.index += 1
-        batch = []
-        for shape, device in zip(self.input_shapes, self.device_inputs):
+
+        ptrs = []
+        for i, _ in enumerate(names):
+            shape = self.input_shapes[i]
+            device = self.device_inputs[i]
             data = self.preprocess(path, shape)
             data = data.reshape((self.batch_size,) + shape)
             cuda.memcpy_htod(device, data)
-            batch.append(int(device))
-        return batch
+            ptrs.append(int(device))
+        return ptrs
+
 
     def read_calibration_cache(self):  # pragma: no cover - file IO
         if os.path.exists(self.cache_file):
