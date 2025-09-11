@@ -29,7 +29,9 @@ class UAV123Calibrator(trt.IInt8EntropyCalibrator2):
     """
 
     def __init__(self, data_dir: str, input_shapes, cache_file: str):
+
         trt.IInt8EntropyCalibrator2.__init__(self)
+
         self.data_dir = data_dir
         self.cache_file = cache_file
         # list of CHW shapes for each network input
@@ -60,6 +62,7 @@ class UAV123Calibrator(trt.IInt8EntropyCalibrator2):
 
     def preprocess(self, path, shape):
         C, H, W = shape
+
         if path.endswith(".npy"):
             arr = np.load(path).astype(np.float32)
             if arr.ndim != 3:
@@ -78,7 +81,9 @@ class UAV123Calibrator(trt.IInt8EntropyCalibrator2):
             if img is None:
                 raise RuntimeError(f"Failed to read image {path}")
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
             img = cv2.resize(img, (W, H))
+
             arr = img.astype(np.float32) / 255.0
             arr = np.transpose(arr, (2, 0, 1))  # CHW
         return arr
@@ -88,6 +93,7 @@ class UAV123Calibrator(trt.IInt8EntropyCalibrator2):
             return None
         path = self.files[self.index]
         self.index += 1
+
         ptrs = []
         for i, _ in enumerate(names):
             shape = self.input_shapes[i]
@@ -97,6 +103,7 @@ class UAV123Calibrator(trt.IInt8EntropyCalibrator2):
             cuda.memcpy_htod(device, data)
             ptrs.append(int(device))
         return ptrs
+
 
     def read_calibration_cache(self):  # pragma: no cover - file IO
         if os.path.exists(self.cache_file):
@@ -158,7 +165,9 @@ def build_engine(
                 for i in range(network.num_inputs)
             ]
             cache = calib_cache or engine_path + ".calib"
+
             calibrator = UAV123Calibrator(calib_dir, input_shapes, cache)
+
             config.int8_calibrator = calibrator
 
         serialized_engine = builder.build_serialized_network(network, config)
