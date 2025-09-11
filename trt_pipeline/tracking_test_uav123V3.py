@@ -74,7 +74,7 @@ def calculate_iou(box1, box2):
     x_left = max(x1, x2)
     y_top = max(y1, y2)
     x_right = min(x1 + w1, x2 + w2)
-    y_bottom = min(y1 + h1, y2 + h1)
+    y_bottom = min(y1 + h1, y2 + h2)
 
     if x_right < x_left or y_bottom < y_top:
         return 0.0
