@@ -146,7 +146,9 @@ def build_engine(
                 for i in range(network.num_inputs)
             ]
             cache = calib_cache or engine_path + ".calib"
+
             calibrator = UAV123Calibrator(calib_dir, input_shapes, cache)
+
             config.int8_calibrator = calibrator
 
         serialized_engine = builder.build_serialized_network(network, config)
