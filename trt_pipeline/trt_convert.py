@@ -130,12 +130,10 @@ def build_engine(
         if int8:
             if calib_dir is None:
                 raise ValueError("calib_dir must be provided when int8=True")
-            builder.int8_mode = True
             config.set_flag(trt.BuilderFlag.INT8)
             input_shape = tuple(network.get_input(0).shape)[1:]
             cache = calib_cache or engine_path + ".calib"
             calibrator = UAV123Calibrator(calib_dir, input_shape, cache)
-            builder.int8_calibrator = calibrator
             config.int8_calibrator = calibrator
 
         serialized_engine = builder.build_serialized_network(network, config)
