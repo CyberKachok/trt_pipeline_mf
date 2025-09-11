@@ -12,8 +12,10 @@ def convert_to_jit(cfg_path, ckpt_path):
     Returns the path to the saved TorchScript model (.pt).
     """
     wrapper = TorchTrackerWrapper(cfg_path, ckpt_path)
+
     wrapper.network.eval()
     model_jit = torch.jit.script(wrapper.network.cpu())
+
 
     model_path, _ = os.path.splitext(ckpt_path)
     jit_path = model_path + '.pt'
@@ -23,7 +25,9 @@ def convert_to_jit(cfg_path, ckpt_path):
 
 
 def convert_to_onnx(cfg_path, ckpt_path):
+
     """Export the tracker network to ONNX and return the model path."""
+
     wrapper = TorchTrackerWrapper(cfg_path, ckpt_path)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -53,10 +57,12 @@ def convert_to_onnx(cfg_path, ckpt_path):
     onnx.checker.check_model(model_onnx)
     print('[INFO] Model successfully converted to onnx:', model_path_onnx)
 
+
     if device.type != 'cuda':
         print('[WARNING] CUDA is not available; exported ONNX on CPU')
 
     return model_path_onnx
+
 
 
 if __name__ == '__main__':
