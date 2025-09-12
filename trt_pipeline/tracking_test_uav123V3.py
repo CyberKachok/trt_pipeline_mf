@@ -6,6 +6,8 @@ from tqdm import tqdm
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor
 import re
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 
