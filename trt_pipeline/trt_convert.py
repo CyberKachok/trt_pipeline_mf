@@ -1,6 +1,8 @@
+
 """Legacy CLI wrapper around :mod:`trt.build`."""
 
 from __future__ import annotations
+
 
 import argparse
 from pathlib import Path
@@ -17,6 +19,7 @@ def build_engine(
     calib_dir: str | None = None,
     workspace: int = 1 << 31,
     calib_cache: str | None = None,
+
     calib_max_samples: int | None = None,
 ) -> Path:
     """Build a TensorRT engine from an ONNX file using the new builder stack."""
