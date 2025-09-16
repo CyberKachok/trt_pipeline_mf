@@ -11,14 +11,19 @@ import numpy as np
 from mixformer_utils.processing_utils import Preprocessor_trt, clip_box, sample_target
 from .tracker_wrapper import TrackerWrapper
 
-if __package__ in {None, ""}:  # pragma: no cover - script execution fallback
-    import sys
-    from pathlib import Path
 
-    sys.path.append(str(Path(__file__).resolve().parents[1]))
-    from trt.runner import TrtRunner
-else:
-    from ..trt.runner import TrtRunner
+try:  # pragma: no cover - import resolution differs between entrypoints
+    from trt_pipeline.trt.runner import TrtRunner
+except ImportError:
+    if __package__ and __package__.count("."):
+        from ..trt.runner import TrtRunner  # type: ignore[import-not-found]
+    else:
+        import sys
+        from pathlib import Path
+
+        sys.path.append(str(Path(__file__).resolve().parents[1]))
+        from trt.runner import TrtRunner  # type: ignore[import-not-found]
+
 
 
 class TrtTrackerWrapper(TrackerWrapper):
