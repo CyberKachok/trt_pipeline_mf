@@ -1,0 +1,57 @@
+# INT8/DLA preset targeting Jetson Orin NX 16GB with calibration enabled.
+model:
+  inputs:
+    template:
+      name: template
+      shape: [3, 112, 112]
+    online_template:
+      name: online_template
+      shape: [3, 112, 112]
+    search:
+      name: search
+      shape: [3, 224, 224]
+  outputs:
+    bbox: bbox
+    confidence: confidence
+onnx:
+  opset: 18
+  dynamic_batch: false
+  dynamic_spatial: false
+  validate: true
+trt:
+  workspace_gb: 4.0
+  fp16: true
+  int8: true
+  strongly_typed: false
+  profiling_verbosity: layer_names_only
+  use_dla: true
+  dla_core: 0
+  allow_gpu_fallback: true
+  sparsity: enable
+  profiles:
+    template:
+      name: template
+      min: [1, 3, 112, 112]
+      opt: [1, 3, 112, 112]
+      max: [1, 3, 112, 112]
+    online_template:
+      name: online_template
+      min: [1, 3, 112, 112]
+      opt: [1, 3, 112, 112]
+      max: [1, 3, 112, 112]
+    search:
+      name: search
+      min: [1, 3, 224, 224]
+      opt: [1, 3, 224, 224]
+      max: [1, 3, 224, 224]
+calibration:
+  data_dir: data/calibration/uav123
+  cache_file: cache/mixformer_v2_int8_dla.cache
+  batch_size: 1
+  max_samples: 2000
+  mean: [0.485, 0.456, 0.406]
+  std: [0.229, 0.224, 0.225]
+  input_metadata:
+    template: [3, 112, 112]
+    online_template: [3, 112, 112]
+    search: [3, 224, 224]
