@@ -8,9 +8,9 @@ from typing import Deque
 
 import numpy as np
 
+
 from mixformer_utils.processing_utils import Preprocessor_trt, clip_box, sample_target
 from .tracker_wrapper import TrackerWrapper
-
 
 try:  # pragma: no cover - import resolution differs between entrypoints
     from trt_pipeline.trt.runner import TrtRunner
