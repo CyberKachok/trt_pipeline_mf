@@ -11,6 +11,7 @@ import numpy as np
 from mixformer_utils.processing_utils import Preprocessor_trt, clip_box, sample_target
 from .tracker_wrapper import TrackerWrapper
 
+
 try:  # pragma: no cover - import resolution differs between entrypoints
     from trt_pipeline.trt.runner import TrtRunner
 except ImportError:
@@ -22,6 +23,7 @@ except ImportError:
 
         sys.path.append(str(Path(__file__).resolve().parents[1]))
         from trt.runner import TrtRunner  # type: ignore[import-not-found]
+
 
 
 class TrtTrackerWrapper(TrackerWrapper):
