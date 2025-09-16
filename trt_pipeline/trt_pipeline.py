@@ -74,12 +74,14 @@ def main():
         print('[BEST] metrics:', best['metrics'])
 
         cfg_name = os.path.splitext(os.path.basename(args.config))[0]
+
         model_tag = (
             os.path.splitext(os.path.basename(args.ckpt))[0]
             if args.ckpt
             else onnx_path.stem
         )
         report_path = os.path.join(args.output_dir, f"{cfg_name}_{model_tag}_trt_report.txt")
+
         with open(report_path, 'w') as f:
             f.write("variant,Avg_IoU,Avg_FPS\n")
             for r in results:
