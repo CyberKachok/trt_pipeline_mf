@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 import logging
+
 import threading
 from contextlib import suppress
+
 from dataclasses import dataclass
 from typing import Dict, Iterable, Mapping
 
 import numpy as np
 
 try:  # pragma: no cover - optional dependency in CI
+
     import pycuda.driver as cuda
 except Exception as exc:  # pragma: no cover
     raise ImportError("PyCUDA is required to run TensorRT engines") from exc
@@ -21,6 +24,7 @@ except Exception as exc:  # pragma: no cover
     raise ImportError("TensorRT is required to run TensorRT engines") from exc
 
 LOGGER = logging.getLogger(__name__)
+
 
 _CONTEXT_LOCK = threading.Lock()
 
@@ -85,10 +89,12 @@ class BindingMemory:
 class TrtRunner:
     """Wraps TensorRT runtime execution with convenient numpy I/O."""
 
+
     def __init__(self, engine_path: str, profile_index: int = 0, device_index: int = 0) -> None:
         owns_ctx, ctx = _ensure_cuda_context(device_index)
         self._cuda_context = ctx
         self._owns_cuda_context = owns_ctx
+
 
         self._logger = trt.Logger(trt.Logger.WARNING)
         self._runtime = trt.Runtime(self._logger)
@@ -98,6 +104,7 @@ class TrtRunner:
         if self._engine is None:
             raise RuntimeError(f"Failed to deserialize engine {engine_path}")
 
+
         self._execution_context = self._engine.create_execution_context()
         if profile_index:
             if hasattr(self._execution_context, "set_optimization_profile"):
@@ -105,6 +112,7 @@ class TrtRunner:
             elif hasattr(self._execution_context, "set_optimization_profile_async"):
                 stream = cuda.Stream()
                 self._execution_context.set_optimization_profile_async(profile_index, stream.handle)
+
                 stream.synchronize()
             else:
                 raise RuntimeError("TensorRT context does not expose profile selection APIs")
@@ -132,7 +140,9 @@ class TrtRunner:
             if binding.mode != trt.TensorIOMode.INPUT:
                 raise ValueError(f"Tensor {name} is not an input binding")
             arr = np.ascontiguousarray(array.astype(binding.dtype, copy=False))
+
             self._execution_context.set_input_shape(name, arr.shape)
+
             binding.resize(arr.shape)
             np.copyto(binding.as_array(), arr)
             assert binding.device is not None
@@ -141,7 +151,9 @@ class TrtRunner:
         # Allocate output buffers based on the shapes reported by the context
         for name, binding in self._bindings.items():
             if binding.mode == trt.TensorIOMode.OUTPUT:
+
                 shape = self._execution_context.get_tensor_shape(name)
+
                 binding.resize(shape)
                 assert binding.device is not None
 
@@ -149,9 +161,11 @@ class TrtRunner:
         for name in self._binding_order:
             binding = self._bindings[name]
             assert binding.device is not None
+
             self._execution_context.set_tensor_address(name, int(binding.device))
 
         if not self._execution_context.execute_async_v3(stream_handle=self._stream.handle):
+
             raise RuntimeError("TensorRT execution failed")
 
         outputs: Dict[str, np.ndarray] = {}
@@ -170,6 +184,7 @@ class TrtRunner:
 
     def get_output_names(self) -> Iterable[str]:
         return [name for name, binding in self._bindings.items() if binding.mode == trt.TensorIOMode.OUTPUT]
+
 
     def close(self) -> None:
         """Release CUDA resources owned by this runner."""
