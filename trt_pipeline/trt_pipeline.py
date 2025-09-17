@@ -1,23 +1,34 @@
 import argparse
 import os
+from pathlib import Path
+
 from model_convert import convert_to_onnx
 from trt_convert import build_engine
 from tracking_test_uav123V3 import run_tracking_evaluation
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Full conversion and evaluation pipeline')
-    parser.add_argument('--config', required=True, help='Path to tracker config file')
-    parser.add_argument('--ckpt', required=True, help='Path to PyTorch checkpoint (.pth)')
-    parser.add_argument('--data_root', required=True, help='Root directory of UAV123 dataset images')
-    parser.add_argument('--anno_root', required=True, help='Root directory of UAV123 annotations')
-    parser.add_argument('--output_dir', required=True, help='Directory to store evaluation results')
-    parser.add_argument('--matlab_config', required=True, help='Path to UAV123 MATLAB config file')
-    parser.add_argument('--workspace', type=int, default=1 << 30, help='TensorRT workspace size in bytes')
-    parser.add_argument('--calib_data', default=None, help='Directory of UAV123 frames for INT8 calibration')
+    parser = argparse.ArgumentParser(description="Full conversion and evaluation pipeline")
+    parser.add_argument("--config", required=True, help="Path to tracker config file")
+    input_group = parser.add_mutually_exclusive_group(required=True)
+    input_group.add_argument("--ckpt", help="Path to PyTorch checkpoint (.pth)")
+    input_group.add_argument("--onnx", help="Path to an existing ONNX model")
+    parser.add_argument("--data_root", required=True, help="Root directory of UAV123 dataset images")
+    parser.add_argument("--anno_root", required=True, help="Root directory of UAV123 annotations")
+    parser.add_argument("--output_dir", required=True, help="Directory to store evaluation results")
+    parser.add_argument("--matlab_config", required=True, help="Path to UAV123 MATLAB config file")
+    parser.add_argument("--workspace", type=int, default=1 << 30, help="TensorRT workspace size in bytes")
+    parser.add_argument("--calib_data", default=None, help="Directory of UAV123 frames for INT8 calibration")
     args = parser.parse_args()
 
-    onnx_path = convert_to_onnx(args.config, args.ckpt)
+    if args.onnx:
+        onnx_path = Path(args.onnx)
+        if not onnx_path.is_file():
+            raise FileNotFoundError(f"Provided ONNX model not found: {onnx_path}")
+    else:
+        onnx_path = convert_to_onnx(args.config, args.ckpt)
+
+    model_id_path = args.ckpt if args.ckpt else str(onnx_path)
 
     builder_variants = [
         {'name': 'fp32', 'fp16': False},
@@ -27,10 +38,10 @@ def main():
 
     results = []
     for variant in builder_variants:
-        engine_path = os.path.splitext(args.ckpt)[0] + f"_{variant['name']}.engine"
+        engine_path = os.path.splitext(model_id_path)[0] + f"_{variant['name']}.engine"
         try:
             build_engine(
-                onnx_path,
+                str(onnx_path),
                 engine_path,
                 fp16=variant.get('fp16', False),
                 int8=variant.get('int8', False),
@@ -63,8 +74,14 @@ def main():
         print('[BEST] metrics:', best['metrics'])
 
         cfg_name = os.path.splitext(os.path.basename(args.config))[0]
-        ckpt_name = os.path.splitext(os.path.basename(args.ckpt))[0]
-        report_path = os.path.join(args.output_dir, f"{cfg_name}_{ckpt_name}_trt_report.txt")
+
+        model_tag = (
+            os.path.splitext(os.path.basename(args.ckpt))[0]
+            if args.ckpt
+            else onnx_path.stem
+        )
+        report_path = os.path.join(args.output_dir, f"{cfg_name}_{model_tag}_trt_report.txt")
+
         with open(report_path, 'w') as f:
             f.write("variant,Avg_IoU,Avg_FPS\n")
             for r in results:
